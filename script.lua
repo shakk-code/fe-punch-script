@@ -42,7 +42,7 @@ equipSound.Parent = handle
 
 game:GetService("StarterGui"):SetCore("SendNotification", {
 	Title = "FE Punch",
-	Text = "by @minishakk. Ragdolls and kills NPCs",
+	Text = "by minishakk. Ragdolls and kills NPCs",
 	Icon = "rbxassetid://16952938318"
 })
 
