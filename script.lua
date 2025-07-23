@@ -1,15 +1,23 @@
 --[[
-  FE Punch Script
-  By minishakk
+	FE Punch Script
+	By minishakk
 
-  R15 ONLY
+	R15 ONLY | ONLY WORKS ON NPCs AND NOT REAL PLAYERS!!!
+	
+	Controls:
+		Left Click - Punch
+		R - Ragdoll Mode (ragdolls the character instead of killing)
+		E - KILL Mode (on by default, kills the character)
 
-  Click to punch NPCs [FE] and turn them to dust ;)
+	Click to punch NPCs [FE] and turn them to dust ;)
 
-  Don't redistribute without permission, or before contacting @minishakk on Discord.
+	Don't redistribute without permission, or before contacting @minishakk on Discord.
 ]]
 
+local mode = "Kill"
+
 local Players = game:GetService("Players")
+local StarterGui = game:GetService("StarterGui")
 local player = Players.LocalPlayer
 repeat task.wait() until player and player:FindFirstChild("Backpack")
 local mouse = player:GetMouse()
@@ -40,15 +48,96 @@ local equipSound = Instance.new("Sound")
 equipSound.SoundId = "rbxassetid://6784421247"
 equipSound.Parent = handle
 
-game:GetService("StarterGui"):SetCore("SendNotification", {
+local rscreamSound = Instance.new("Sound")
+rscreamSound.SoundId = "rbxassetid://6108565657"
+rscreamSound.Parent = handle
+
+local kscreamSound = Instance.new("Sound")
+kscreamSound.SoundId = "rbxassetid://7772283448"
+kscreamSound.Parent = handle
+
+StarterGui:SetCore("SendNotification", {
 	Title = "FE Punch",
-	Text = "by minishakk. Ragdolls and kills NPCs",
+	Text = "by minishakk. Ragdolls (R) or Kills (E) NPCs",
 	Icon = "rbxassetid://16952938318"
 })
 
-local equipped = false
-local mouseDownConnection
-local isPunching = false
+local function ragdoll(character)
+	local motors = {}
+
+	for _, motor in ipairs(character:GetDescendants()) do
+		if motor:IsA("Motor6D") then
+			local part0, part1 = motor.Part0, motor.Part1
+			if part0 and part1 then
+				table.insert(motors, {
+					Name = motor.Name,
+					Parent = motor.Parent,
+					Part0 = part0,
+					Part1 = part1,
+					C0 = motor.C0,
+					C1 = motor.C1,
+				})
+
+				local a0 = Instance.new("Attachment")
+				a0.CFrame = motor.C0
+				a0.Name = "RagdollAttachment0"
+				a0.Parent = part0
+
+				local a1 = Instance.new("Attachment")
+				a1.CFrame = motor.C1
+				a1.Name = "RagdollAttachment1"
+				a1.Parent = part1
+
+				local constraint = Instance.new("BallSocketConstraint")
+				constraint.Attachment0 = a0
+				constraint.Attachment1 = a1
+				constraint.Name = "RagdollConstraint"
+				constraint.Parent = part0
+			end
+			motor:Destroy()
+		end
+	end
+
+	local root = character:FindFirstChild("HumanoidRootPart")
+	if root then
+		local force = Instance.new("BodyVelocity")
+		force.Velocity = root.CFrame.LookVector * 50
+		force.MaxForce = Vector3.new(1e5, 0, 1e5)
+		force.P = 1e4
+		force.Parent = root
+		game:GetService("Debris"):AddItem(force, 0.5)
+	end
+
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid.PlatformStand = false
+		humanoid:ChangeState(Enum.HumanoidStateType.Ragdoll)
+	end
+
+	task.wait(3)
+
+	for _, desc in ipairs(character:GetDescendants()) do
+		if desc:IsA("BallSocketConstraint") and desc.Name == "RagdollConstraint" then
+			desc:Destroy()
+		elseif desc:IsA("Attachment") and (desc.Name == "RagdollAttachment0" or desc.Name == "RagdollAttachment1") then
+			desc:Destroy()
+		end
+	end
+
+	for _, data in ipairs(motors) do
+		local m = Instance.new("Motor6D")
+		m.Name = data.Name
+		m.Part0 = data.Part0
+		m.Part1 = data.Part1
+		m.C0 = data.C0
+		m.C1 = data.C1
+		m.Parent = data.Parent
+	end
+
+	if humanoid then
+		humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+	end
+end
 
 local function bleed(position)
 	wait(1)
@@ -73,6 +162,7 @@ local function bleed(position)
 	game:GetService("Debris"):AddItem(part, 2)
 end
 
+local isPunching = false
 local function animations()
 	if isPunching then return end
 	isPunching = true
@@ -99,7 +189,7 @@ local function animations()
 	end
 end
 
-local function pSounds()
+local function audio()
 	hitSound:Play()
 	task.wait(1)
 	for i = 1, 3 do
@@ -129,18 +219,41 @@ local function punch(target)
 		if humanoid and head then
 			gotoNPC(target)
 			animations()
-			task.spawn(pSounds)
+			task.spawn(audio)
 			bleed(head.Position)
 
-			task.wait(2.5)
+			task.wait(1.5)
 			if humanoid and humanoid.Health > 0 then
-				humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-				task.wait(0.2)
-				humanoid:ChangeState(Enum.HumanoidStateType.Dead)
+				if mode == "Kill" then
+					humanoid:ChangeState(Enum.HumanoidStateType.Ragdoll)
+
+					local root = character:FindFirstChild("HumanoidRootPart")
+					if root then
+						local force = Instance.new("BodyVelocity")
+						force.Velocity = root.CFrame.LookVector * 50
+						force.MaxForce = Vector3.new(1e5, 0, 1e5)
+						force.P = 1e4
+						force.Parent = root
+						game:GetService("Debris"):AddItem(force, 0.5)
+					end
+
+					task.wait(0.3)
+					kscreamSound:Play()
+					character:BreakJoints() -- brodie is cooked
+					
+				elseif mode == "Ragdoll" then
+					humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+					task.wait(0.1)
+					rscreamSound:Play()
+					ragdoll(character) -- brodie is sizzled
+				end
 			end
 		end
 	end
 end
+
+local equipped = false
+local mouseDownConnection
 
 tool.Equipped:Connect(function()
 	equipped = true
@@ -160,4 +273,25 @@ tool.Unequipped:Connect(function()
 	end
 end)
 
-tool.Parent = player.Backpack
+mouse.KeyDown:Connect(function(key)
+	key = key:lower()
+	if key == "e" then
+		mode = "Kill"
+		StarterGui:SetCore("SendNotification", {
+			Title = "Mode Changed",
+			Text = "Kill Mode Activated",
+			Icon = "rbxassetid://16952938318",
+			Duration = 2
+		})
+	elseif key == "r" then
+		mode = "Ragdoll"
+		StarterGui:SetCore("SendNotification", {
+			Title = "Mode Changed",
+			Text = "Ragdoll Mode Activated",
+			Icon = "rbxassetid://16952938318",
+			Duration = 2
+		})
+	end
+end)
+
+tool.Parent = player.Backpack -- gives you the power :)
