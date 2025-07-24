@@ -1,26 +1,36 @@
 --[[
-	FE Punch Script (v1.2)
+	FE Punch Script (v2)
 	By minishakk
 
-	R15 ONLY | ONLY WORKS ON NPCs AND NOT REAL PLAYERS!!!
+	R15 ONLY | ONLY WORKS ON NPCs or DUMMYS AND NOT REAL PLAYERS!!!
 	
 	Controls:
 		Left Click - Punch
 		R - Ragdoll Mode (ragdolls the character instead of killing)
-		E - KILL Mode (on by default, kills the character)
+		E - Kill Mode (immediately kills the character)
+		F - Progressive Mode (increasing damage, on by default)
 		
 	Changelog:
 		7/22/2025 [9:44 PM] - Initial release (v1.0)
 		7/23/2025 [10:23 AM] - Updated animations (v1.05)
 		7/23/2025 [11:45 AM] - Added ragdoll/kill modes (v1.1)
 		7/24/2025 [1:30 PM] - Added realistic blood/camera effects (v1.2)
+		
+		7/24/2025 [3:18 PM] - Update was so big, had to make this v2. Here is a list of changes:
+			- New "Progressive" mode, which damages the character using ragdoll, and when low, uses the kill mode.
+			- Default mode switched to "Progressive".
+			- New mode icons and sounds on switch to match.
+			- Revamped blood, audio, and camera effects.
 
 	Click to punch NPCs [FE] and turn them to dust ;)
 
 	Don't redistribute without permission, or before contacting @minishakk on Discord.
 ]]
 
-local mode = "Ragdoll" -- Change for ragdoll or kill mode at script launch. You can always switch while running the script.
+local mode = "Progressive" -- change for ragdoll or kill mode at script launch. You can always switch while running the script.
+
+local punchCounts = {} -- used for progressive mode.
+local healthPerHit = 30 -- also used for progressive mode.
 
 local Players = game:GetService("Players")
 local StarterGui = game:GetService("StarterGui")
@@ -83,7 +93,7 @@ boneSound3.Parent = handle
 
 StarterGui:SetCore("SendNotification", {
 	Title = "FE Punch",
-	Text = "by minishakk. Ragdolls (R) or Kills (E) NPCs",
+	Text = "by minishakk. Tortures NPCs. Controls: E, R, F",
 	Icon = "rbxassetid://16952938318"
 })
 
@@ -345,6 +355,34 @@ local function punch(target)
 				elseif mode == "Ragdoll" then
 					rscreamSound:Play()
 					ragdoll(character)
+				elseif mode == "Progressive" then
+					local id = character
+					punchCounts[id] = (punchCounts[id] or 0) + 1
+
+					if punchCounts[id] < 3 then
+						rscreamSound:Play()
+						ragdoll(character)
+
+						local newHealth = math.max(humanoid.Health - healthPerHit, 1)
+						humanoid.Health = newHealth
+
+					else
+						humanoid:ChangeState(Enum.HumanoidStateType.Ragdoll)
+
+						local root = character:FindFirstChild("HumanoidRootPart")
+						if root then
+							local force = Instance.new("BodyVelocity")
+							force.Velocity = root.CFrame.LookVector * 50
+							force.MaxForce = Vector3.new(1e5, 0, 1e5)
+							force.P = 1e4
+							force.Parent = root
+							Debris:AddItem(force, 0.5)
+						end
+
+						kscreamSound:Play()
+						humanoid.Health = 0
+						punchCounts[id] = nil
+					end
 				end
 			end
 		end
@@ -369,16 +407,24 @@ mouse.KeyDown:Connect(function(key)
 		mode = "Ragdoll"
 		StarterGui:SetCore("SendNotification", {
 			Title = "FE Punch",
-			Text = "Ragdoll mode enabled",
-			Icon = "rbxassetid://16952938318",
+			Text = "Ragdoll mode enabled.",
+			Icon = "rbxassetid://16142074920",
 			Duration = 2
 		})
 	elseif key == "e" then
 		mode = "Kill"
 		StarterGui:SetCore("SendNotification", {
 			Title = "FE Punch",
-			Text = "Kill mode enabled",
-			Icon = "rbxassetid://16952938318",
+			Text = "Kill mode enabled.",
+			Icon = "rbxassetid://9583486345",
+			Duration = 2
+		})
+	elseif key == "f" then
+		mode = "Progressive"
+		StarterGui:SetCore("SendNotification", {
+			Title = "FE Punch",
+			Text = "Progressive mode enabled.",
+			Icon = "rbxassetid://74033962087144",
 			Duration = 2
 		})
 	end
