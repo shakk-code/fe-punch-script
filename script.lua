@@ -16,7 +16,7 @@
 		7/23/2025 [11:45 AM] - Added ragdoll/kill modes (v1.1)
 		7/24/2025 [1:30 PM] - Added realistic blood/camera effects (v1.2)
 		
-		7/24/2025 [9:55 PM] - Update was so big, had to make this v2. Here is a list of changes:
+		7/24/2025 [3:31 PM] - Update was so big, had to make this v2. Here is a list of changes:
 			- New "Progressive" mode, which damages the character using ragdoll, and when low, uses the kill mode.
 			- Default mode switched to "Progressive".
 			- New mode icons and sounds on switch to match.
