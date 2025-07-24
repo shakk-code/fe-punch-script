@@ -1,5 +1,5 @@
 --[[
-	FE Punch Script
+	FE Punch Script (v1.2)
 	By minishakk
 
 	R15 ONLY | ONLY WORKS ON NPCs AND NOT REAL PLAYERS!!!
@@ -8,16 +8,24 @@
 		Left Click - Punch
 		R - Ragdoll Mode (ragdolls the character instead of killing)
 		E - KILL Mode (on by default, kills the character)
+		
+	Changelog:
+		7/22/2025 [9:44 PM] - Initial release (v1.0)
+		7/23/2025 [10:23 AM] - Updated animations (v1.05)
+		7/23/2025 [11:45 AM] - Added ragdoll/kill modes (v1.1)
+		7/24/2025 [1:30 PM] - Added realistic blood/camera effects (v1.2)
 
 	Click to punch NPCs [FE] and turn them to dust ;)
 
 	Don't redistribute without permission, or before contacting @minishakk on Discord.
 ]]
 
-local mode = "Kill"
+local mode = "Ragdoll" -- Change for ragdoll or kill mode at script launch. You can always switch while running the script.
 
 local Players = game:GetService("Players")
 local StarterGui = game:GetService("StarterGui")
+local Debris = game:GetService("Debris")
+local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 repeat task.wait() until player and player:FindFirstChild("Backpack")
 local mouse = player:GetMouse()
@@ -34,10 +42,10 @@ handle.Transparency = 1
 handle.CanCollide = false
 handle.Parent = tool
 
-local hitSound = Instance.new("Sound")
-hitSound.SoundId = "rbxassetid://2885006854"
-hitSound.Volume = 1
-hitSound.Parent = handle
+local fistSound = Instance.new("Sound")
+fistSound.SoundId = "rbxassetid://2885006854"
+fistSound.Volume = 1
+fistSound.Parent = handle
 
 local smackSound = Instance.new("Sound")
 smackSound.SoundId = "rbxassetid://9117970193"
@@ -55,6 +63,23 @@ rscreamSound.Parent = handle
 local kscreamSound = Instance.new("Sound")
 kscreamSound.SoundId = "rbxassetid://7772283448"
 kscreamSound.Parent = handle
+
+-- BONE SOUNDS
+
+local boneSound1 = Instance.new("Sound")
+boneSound1.SoundId = "rbxassetid://9113544629"
+boneSound1.Volume = 1
+boneSound1.Parent = handle
+
+local boneSound2 = Instance.new("Sound")
+boneSound2.SoundId = "rbxassetid://7837512412"
+boneSound2.Volume = 1
+boneSound2.Parent = handle
+
+local boneSound3 = Instance.new("Sound")
+boneSound3.SoundId = "rbxassetid://82176913611683"
+boneSound3.Volume = 1
+boneSound3.Parent = handle
 
 StarterGui:SetCore("SendNotification", {
 	Title = "FE Punch",
@@ -105,7 +130,7 @@ local function ragdoll(character)
 		force.MaxForce = Vector3.new(1e5, 0, 1e5)
 		force.P = 1e4
 		force.Parent = root
-		game:GetService("Debris"):AddItem(force, 0.5)
+		Debris:AddItem(force, 0.5)
 	end
 
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
@@ -140,32 +165,90 @@ local function ragdoll(character)
 end
 
 local function bleed(position)
-	wait(1)
+	local dir = Vector3.new(
+		math.random(-100, 100) / 100,
+		math.random(-100, 100) / 100,
+		math.random(-100, 100) / 100
+	).Unit
+
 	local part = Instance.new("Part")
 	part.Size = Vector3.new(1, 1, 1)
 	part.Anchored = true
 	part.CanCollide = false
 	part.Transparency = 1
-	part.Position = position
+	part.CFrame = CFrame.new(position, position + dir)
 	part.Parent = workspace
 
 	local emitter = Instance.new("ParticleEmitter")
-	emitter.Texture = "rbxassetid://102626391021863"
-	emitter.Rate = 50
+	emitter.Texture = "rbxassetid://12532663797"
+	emitter.Rate = 0
 	emitter.Lifetime = NumberRange.new(0.3, 0.5)
-	emitter.Speed = NumberRange.new(5, 10)
-	emitter.VelocitySpread = 50
+	emitter.Speed = NumberRange.new(10, 10)
+	emitter.VelocitySpread = 0
 	emitter.Color = ColorSequence.new(Color3.new(0.6, 0, 0))
+	emitter.EmissionDirection = Enum.NormalId.Front
+	emitter.Acceleration = Vector3.new(0, -20, 0)
 	emitter.Parent = part
 
 	emitter:Emit(1)
-	game:GetService("Debris"):AddItem(part, 2)
+	Debris:AddItem(part, 2)
 end
 
-local isPunching = false
+local function flash()
+	local gui = Instance.new("ScreenGui")
+	gui.IgnoreGuiInset = true
+	gui.ResetOnSpawn = false
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	gui.Parent = player:WaitForChild("PlayerGui")
+
+	local frame = Instance.new("Frame")
+	frame.BackgroundColor3 = Color3.new(0.545098, 0.231373, 0.235294)
+	frame.Size = UDim2.new(1, 0, 1, 0)
+	frame.BackgroundTransparency = 1
+	frame.Parent = gui
+
+	local tween = TweenService:Create(frame, TweenInfo.new(0.1), {BackgroundTransparency = 0.5})
+	tween:Play()
+	tween.Completed:Wait()
+
+	local outTween = TweenService:Create(frame, TweenInfo.new(0.2), {BackgroundTransparency = 1})
+	outTween:Play()
+	outTween.Completed:Wait()
+
+	gui:Destroy()
+end
+
+local function shake()
+	local cam = workspace.CurrentCamera
+	if not cam then return end
+
+	local originalCFrame = cam.CFrame
+	local originalCameraType = cam.CameraType
+	
+	cam.CameraType = Enum.CameraType.Scriptable
+
+	local shakes = 6
+	local magnitude = 5
+
+	for i = 1, shakes do
+		local offset = Vector3.new(
+			math.random(-100, 100) / 1000,
+			math.random(-100, 100) / 1000,
+			math.random(-100, 100) / 1000
+		) * magnitude
+
+		cam.CFrame = originalCFrame * CFrame.new(offset)
+		task.wait(0.01)
+	end
+
+	cam.CFrame = originalCFrame
+	cam.CameraType = originalCameraType
+end
+
+local punching = false
 local function animations()
-	if isPunching then return end
-	isPunching = true
+	if punching then return end
+	punching = true
 
 	local character = player.Character
 	if character then
@@ -179,22 +262,43 @@ local function animations()
 			track.Looped = false
 			track:Play()
 			track.Stopped:Connect(function()
-				isPunching = false
+				punching = false
 			end)
 		else
-			isPunching = false
+			punching = false
 		end
 	else
-		isPunching = false
+		punching = false
 	end
 end
 
-local function audio()
-	hitSound:Play()
-	task.wait(1)
+local function audio(targetCharacter)
+	fistSound:Play()
+	task.wait(0.5)
+
+	local boneSounds = {boneSound1, boneSound2, boneSound3}
+
 	for i = 1, 3 do
-		smackSound:Play()
-		task.wait(0.5)
+		if i <= 2 then
+			smackSound:Play()
+		end
+		boneSounds[i]:Play()
+
+		flash()
+		task.spawn(shake)
+
+		if targetCharacter then
+			local torso = targetCharacter:FindFirstChild("UpperTorso") or targetCharacter:FindFirstChild("Torso")
+			if torso then
+				bleed(torso.Position + Vector3.new(
+					math.random(-100, 100) / 100,
+					math.random(-100, 100) / 100,
+					math.random(-100, 100) / 100
+				))
+			end
+		end
+
+		task.wait(0.3)
 	end
 end
 
@@ -219,10 +323,9 @@ local function punch(target)
 		if humanoid and head then
 			gotoNPC(target)
 			animations()
-			task.spawn(audio)
-			bleed(head.Position)
+			task.spawn(function() audio(character) end)
 
-			task.wait(1.5)
+			task.wait(2)
 			if humanoid and humanoid.Health > 0 then
 				if mode == "Kill" then
 					humanoid:ChangeState(Enum.HumanoidStateType.Ragdoll)
@@ -234,64 +337,51 @@ local function punch(target)
 						force.MaxForce = Vector3.new(1e5, 0, 1e5)
 						force.P = 1e4
 						force.Parent = root
-						game:GetService("Debris"):AddItem(force, 0.5)
+						Debris:AddItem(force, 0.5)
 					end
-
-					task.wait(0.3)
-					kscreamSound:Play()
-					character:BreakJoints() -- brodie is cooked
 					
+					kscreamSound:Play()
+					humanoid.Health = 0
 				elseif mode == "Ragdoll" then
-					humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-					task.wait(0.1)
 					rscreamSound:Play()
-					ragdoll(character) -- brodie is sizzled
+					ragdoll(character)
 				end
 			end
 		end
 	end
 end
 
-local equipped = false
-local mouseDownConnection
-
 tool.Equipped:Connect(function()
-	equipped = true
 	equipSound:Play()
-	mouseDownConnection = mouse.Button1Down:Connect(function()
-		if equipped and mouse.Target then
-			punch(mouse.Target)
-		end
-	end)
 end)
 
-tool.Unequipped:Connect(function()
-	equipped = false
-	if mouseDownConnection then
-		mouseDownConnection:Disconnect()
-		mouseDownConnection = nil
+tool.Activated:Connect(function()
+	if punching then return end
+
+	local target = mouse.Target
+	if target and target.Parent then
+		punch(target)
 	end
 end)
 
 mouse.KeyDown:Connect(function(key)
-	key = key:lower()
-	if key == "e" then
-		mode = "Kill"
+	if key == "r" then
+		mode = "Ragdoll"
 		StarterGui:SetCore("SendNotification", {
-			Title = "Mode Changed",
-			Text = "Kill Mode Activated",
+			Title = "FE Punch",
+			Text = "Ragdoll mode enabled",
 			Icon = "rbxassetid://16952938318",
 			Duration = 2
 		})
-	elseif key == "r" then
-		mode = "Ragdoll"
+	elseif key == "e" then
+		mode = "Kill"
 		StarterGui:SetCore("SendNotification", {
-			Title = "Mode Changed",
-			Text = "Ragdoll Mode Activated",
+			Title = "FE Punch",
+			Text = "Kill mode enabled",
 			Icon = "rbxassetid://16952938318",
 			Duration = 2
 		})
 	end
 end)
 
-tool.Parent = player.Backpack -- gives you the power :)
+tool.Parent = player.Backpack -- gives you the power ;)
