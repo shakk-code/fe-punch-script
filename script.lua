@@ -16,7 +16,7 @@
 		7/23/2025 [11:45 AM] - Added ragdoll/kill modes (v1.1)
 		7/24/2025 [1:30 PM] - Added realistic blood/camera effects (v1.2)
 		
-		7/24/2025 [3:18 PM] - Update was so big, had to make this v2. Here is a list of changes:
+		7/24/2025 [9:55 PM] - Update was so big, had to make this v2. Here is a list of changes:
 			- New "Progressive" mode, which damages the character using ragdoll, and when low, uses the kill mode.
 			- Default mode switched to "Progressive".
 			- New mode icons and sounds on switch to match.
@@ -28,7 +28,6 @@
 ]]
 
 local mode = "Progressive" -- change for ragdoll or kill mode at script launch. You can always switch while running the script.
-
 local punchCounts = {} -- used for progressive mode.
 local healthPerHit = 30 -- also used for progressive mode.
 
@@ -360,12 +359,11 @@ local function punch(target)
 					punchCounts[id] = (punchCounts[id] or 0) + 1
 
 					if punchCounts[id] < 3 then
-						rscreamSound:Play()
-						ragdoll(character)
-
 						local newHealth = math.max(humanoid.Health - healthPerHit, 1)
+						
+						rscreamSound:Play()
 						humanoid.Health = newHealth
-
+						ragdoll(character)
 					else
 						humanoid:ChangeState(Enum.HumanoidStateType.Ragdoll)
 
