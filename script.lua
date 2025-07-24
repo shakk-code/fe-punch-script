@@ -28,6 +28,7 @@
 ]]
 
 local mode = "Progressive" -- change for ragdoll or kill mode at script launch. You can always switch while running the script.
+
 local punchCounts = {} -- used for progressive mode.
 local healthPerHit = 30 -- also used for progressive mode.
 
