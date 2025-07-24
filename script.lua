@@ -1,5 +1,5 @@
 --[[
-	FE Punch Script (v2)
+	FE Punch Script (v2.1)
 	By minishakk
 
 	R15 ONLY | ONLY WORKS ON NPCs or DUMMYS AND NOT REAL PLAYERS!!!
@@ -22,6 +22,8 @@
 			- New mode icons and sounds on switch to match.
 			- Revamped blood, audio, and camera effects.
 
+		7/24/2025 [3:41 PM] - Fixed ragdoll collisions, and character damage model. (v2.1)
+
 	Click to punch NPCs [FE] and turn them to dust ;)
 
 	Don't redistribute without permission, or before contacting @minishakk on Discord.
@@ -39,6 +41,9 @@ local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 repeat task.wait() until player and player:FindFirstChild("Backpack")
 local mouse = player:GetMouse()
+local PhysicsService = game:GetService("PhysicsService")
+
+local RAGDOLL_GROUP = "RagdollParts"
 
 local tool = Instance.new("Tool")
 tool.Name = "Iron Fist"
@@ -97,6 +102,13 @@ StarterGui:SetCore("SendNotification", {
 	Icon = "rbxassetid://16952938318"
 })
 
+pcall(function()
+	if not PhysicsService:CollisionGroupExists(RAGDOLL_GROUP) then
+		PhysicsService:CreateCollisionGroup(RAGDOLL_GROUP)
+	end
+	PhysicsService:CollisionGroupSetCollidable(RAGDOLL_GROUP, RAGDOLL_GROUP, true)
+end)
+
 local function ragdoll(character)
 	local motors = {}
 
@@ -130,6 +142,13 @@ local function ragdoll(character)
 				constraint.Parent = part0
 			end
 			motor:Destroy()
+		end
+	end
+
+	for _, part in ipairs(character:GetDescendants()) do
+		if part:IsA("BasePart") then
+			part.CanCollide = true
+			part.CollisionGroup = RAGDOLL_GROUP
 		end
 	end
 
@@ -167,6 +186,12 @@ local function ragdoll(character)
 		m.C0 = data.C0
 		m.C1 = data.C1
 		m.Parent = data.Parent
+
+		data.Part0.CollisionGroup = "Default"
+		data.Part1.CollisionGroup = "Default"
+
+		data.Part0.CanCollide = false
+		data.Part1.CanCollide = false
 	end
 
 	if humanoid then
